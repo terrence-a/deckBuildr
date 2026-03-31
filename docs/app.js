@@ -1,11 +1,6 @@
-// ── DeckBldr app.js ──────────────────────────────────────────────────────────
-// Ports deckbldr.py logic to browser JavaScript.
-// Calls Shopify suggest.json + products/{handle}.json for each card/store.
-// Falls back to a CORS proxy if direct requests are blocked.
 
 'use strict';
 
-// ── Store Configurations ─────────────────────────────────────────────────────
 const STORES = [
   {
     id: 'four01',
@@ -50,22 +45,16 @@ const CONDITION_MAP = {
   DMG: ['DMG', 'DAMAGED', 'POOR'],
 };
 
-// ── State ────────────────────────────────────────────────────────────────────
-let useCorsProxy = false;
+let useCorsProxy = true;
 let abortController = null;
 let currentResults = [];  // [{ card, stores: { storeName: { price, url } } }]
 
-// CORS proxy options — tried in order until one works
 const CORS_PROXIES = [
-  // corsproxy.io: simple prefix, returns raw response
   url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  // allorigins.win: returns { contents: "...", status: { http_code: 200 } }
   url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-  // thingproxy: simple prefix
   url => `https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 
-// ── DOM Refs ─────────────────────────────────────────────────────────────────
 const dropZone    = document.getElementById('drop-zone');
 const fileInput   = document.getElementById('file-input');
 const pasteArea   = document.getElementById('paste-area');
@@ -89,7 +78,6 @@ const resultsTbody   = document.getElementById('results-tbody');
 const resultsSummary = document.getElementById('results-summary');
 const resultsTable   = document.getElementById('results-table');
 
-// ── Parsing ───────────────────────────────────────────────────────────────────
 function parseText(raw) {
   return raw
     .split('\n')
@@ -115,16 +103,13 @@ function parseInput(raw, isCSV = false) {
   return isCSV ? parseCsv(raw) : parseText(raw);
 }
 
-// ── Fetch helpers ─────────────────────────────────────────────────────────────
 async function getJSON(url, signal) {
   if (!useCorsProxy) {
-    // Direct fetch — works when server sends CORS headers (expected on GitHub Pages)
     const res = await fetch(url, { signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   }
 
-  // Try each proxy in order, return first successful response
   let lastErr;
   for (const makeUrl of CORS_PROXIES) {
     const proxyUrl = makeUrl(url);
@@ -133,7 +118,6 @@ async function getJSON(url, signal) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      // allorigins.win wraps the response in { contents: "...", status: {...} }
       if (data && typeof data.contents === 'string') {
         try { return JSON.parse(data.contents); } catch { throw new Error('Bad JSON from proxy'); }
       }
@@ -141,7 +125,6 @@ async function getJSON(url, signal) {
     } catch (e) {
       if (e.name === 'AbortError') throw e;
       lastErr = e;
-      // Try next proxy
     }
   }
   throw lastErr || new Error('All proxies failed');
@@ -161,7 +144,6 @@ function matchesFilter(product, store) {
 async function fetchPrice(store, cardName, condition, signal) {
   const keywords = CONDITION_MAP[condition] || [condition];
 
-  // 1. Suggest endpoint
   const params = new URLSearchParams({
     q: cardName,
     'resources[type]': 'product',
@@ -186,7 +168,6 @@ async function fetchPrice(store, cardName, condition, signal) {
 
   if (!candidates.length) return { price: null, url: null };
 
-  // 2. Try variant endpoint on top-3 candidates
   let bestPrice = Infinity;
   let bestUrl = '';
   let foundCondition = false;
@@ -228,7 +209,6 @@ async function fetchPrice(store, cardName, condition, signal) {
 
   if (foundCondition) return { price: bestPrice, url: bestUrl };
 
-  // 3. Cheapest fallback from suggest
   candidates.sort((a, b) => parseFloat(a.price_min) - parseFloat(b.price_min));
   const best = candidates[0];
   return {
@@ -237,7 +217,6 @@ async function fetchPrice(store, cardName, condition, signal) {
   };
 }
 
-// ── UI Helpers ────────────────────────────────────────────────────────────────
 function enabledStores() {
   return STORES.filter(s =>
     document.getElementById(`toggle-${s.id}`)?.classList.contains('active')
@@ -258,7 +237,6 @@ function fmtPrice(priceNum) {
 
 function buildTableHeader(stores) {
   const thead = resultsTable.querySelector('thead tr');
-  // Clear dynamic cols (beyond Card Name)
   while (thead.children.length > 1) thead.removeChild(thead.lastChild);
   for (const s of stores) {
     const th = document.createElement('th');
@@ -335,7 +313,6 @@ function updateSummary(cards, stores) {
   resultsSummary.innerHTML = `<strong>${found}</strong> of ${cards.length} card(s) found across ${stores.length} store(s)`;
 }
 
-// ── Sort ──────────────────────────────────────────────────────────────────────
 let sortCol = null;
 let sortDir = 1;
 
@@ -348,7 +325,6 @@ function sortTable(col) {
     sortDir = 1;
   }
 
-  // Update header indicators
   resultsTable.querySelectorAll('th').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
     if (th.dataset.col === col) {
@@ -375,7 +351,6 @@ function sortTable(col) {
   });
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
 function exportCsv() {
   const stores = enabledStores();
   const headers = ['card_name', ...stores.map(s => `${s.name} (${s.currency})`), 'Cheapest Store', 'Cheapest Price (CAD)'];
@@ -410,9 +385,7 @@ function exportCsv() {
   a.click();
 }
 
-// ── Main Run ──────────────────────────────────────────────────────────────────
 async function run() {
-  // Parse cards
   const raw = pasteArea.value.trim();
   const fileText = dropZone.dataset.fileText || '';
   const fileIsCSV = dropZone.dataset.fileIsCSV === 'true';
@@ -435,13 +408,11 @@ async function run() {
 
   const condition = condSelect.value;
 
-  // Reset
   abortController = new AbortController();
   currentResults = cards.map(card => ({ card, stores: {} }));
   resultsTbody.innerHTML = '';
   corsNotice.classList.remove('visible');
 
-  // Show sections
   progressSection.classList.add('visible');
   resultsSection.classList.add('visible');
   runBtn.disabled = true;
@@ -483,7 +454,6 @@ async function run() {
       done++;
       setProgress(done, total, `${store.name} → ${card}`);
 
-      // Polite delay
       await sleep(500);
     }
   }
@@ -499,9 +469,73 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ── Event Wiring ──────────────────────────────────────────────────────────────
+const THEME_KEY = 'deckbldr-theme';
+
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(pref) {
+  const resolved = pref === 'system' ? getSystemTheme() : pref;
+  document.documentElement.dataset.theme = resolved === 'light' ? 'light' : '';
+
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeVal === pref);
+  });
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY) || 'system';
+  applyTheme(saved);
+
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if ((localStorage.getItem(THEME_KEY) || 'system') === 'system') applyTheme('system');
+  });
+}
+
+async function loadRandomCardArt() {
+  const img = document.getElementById('logo-art');
+  const fallback = document.getElementById('logo-fallback');
+  if (!img) return;
+
+  try {
+    const res = await fetch('https://api.scryfall.com/cards/random', {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error('no card');
+    const card = await res.json();
+
+    const artUrl = card?.image_uris?.small;
+    if (!artUrl) throw new Error('no art');
+
+    img.onload = () => {
+      img.style.display = 'block';
+      if (fallback) fallback.style.display = 'none';
+    };
+    img.onerror = () => { /* keep fallback */ };
+    img.src = artUrl;
+
+    const icon = document.getElementById('logo-icon');
+    if (icon) {
+      icon.title = 'your card of the day';
+      icon.addEventListener('click', () => window.open(card.scryfall_uri, '_blank', 'noopener'), { once: true });
+    }
+  } catch {
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Store toggles
+  loadRandomCardArt();
+
+  initTheme();
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pref = btn.dataset.themeVal;
+      localStorage.setItem(THEME_KEY, pref);
+      applyTheme(pref);
+    });
+  });
+
   STORES.forEach(store => {
     const el = document.getElementById(`toggle-${store.id}`);
     if (!el) return;
@@ -509,7 +543,6 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('click', () => el.classList.toggle('active'));
   });
 
-  // Drop zone
   dropZone.addEventListener('click', () => fileInput.click());
 
   dropZone.addEventListener('dragover', e => {
@@ -530,17 +563,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fileInput.files[0]) handleFile(fileInput.files[0]);
   });
 
-  // Buttons
   runBtn.addEventListener('click', run);
   stopBtn.addEventListener('click', () => { abortController?.abort(); });
   clearBtn.addEventListener('click', clearAll);
   exportBtn.addEventListener('click', exportCsv);
 
-  // CORS toggle
   corsToggle.addEventListener('change', e => {
     useCorsProxy = e.target.checked;
-    if (useCorsProxy) corsNotice.querySelector('.cors-notice-text').innerHTML =
-      '<strong>CORS proxy enabled.</strong> Requests are routed through corsproxy.io. Re-run to retry failed cards.';
+    if (!useCorsProxy) corsNotice.querySelector('.cors-notice-text').innerHTML =
+      '<strong>CORS proxy disabled.</strong> Direct requests may be blocked by some stores. Re-run to retry.';
+    else corsNotice.querySelector('.cors-notice-text').innerHTML =
+      '<strong>CORS proxy enabled.</strong> Requests are routed through corsproxy.io.';
   });
 });
 

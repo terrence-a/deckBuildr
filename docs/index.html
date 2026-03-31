@@ -1,31 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>DeckBldr — MTG Price Checker</title>
-  <meta name="description" content="Compare Magic: The Gathering card prices across Canadian storefronts. Find the best NM price for every card in your EDH deck." />
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
+  <meta name="description" content="Compare Magic: The Gathering card prices across Canadian storefronts. Find the best NM price for every card in your EDH deck."/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <script>(function(){var p=localStorage.getItem('deckbldr-theme')||'system';var r=p==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):p;if(r==='light')document.documentElement.dataset.theme='light';})()</script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>"/>
 </head>
 <body>
-
 <div class="app-wrapper">
-
-  <!-- ── Header ────────────────────────────────────────────────────────── -->
   <header>
-    <div class="logo-icon">🃏</div>
-    <div class="header-text">
-      <h1>DeckBldr</h1>
-      <p>MTG card price checker · Canadian storefronts · Prices in CAD</p>
+    <div class="header-left">
+      <div class="logo-icon" id="logo-icon">
+        <img id="logo-art" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;"/>
+        <span id="logo-fallback"><i class="fa-solid fa-layer-group"></i></span>
+      </div>
+      <div class="header-text">
+        <h1>DeckBldr</h1>
+        <p>MTG card price checker · Canadian storefronts · Prices in CAD</p>
+      </div>
+    </div>
+    <div class="theme-toggle" id="theme-toggle">
+      <button class="theme-btn" id="theme-light" data-theme-val="light"><img src="https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/8e/W.svg" alt="W" width="15"> <span>Light</span></button>
+      <button class="theme-btn" id="theme-dark"  data-theme-val="dark"> <img src="https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/2/2f/B.svg" alt="B" width="15"> <span>Dark</span></button>
+      <button class="theme-btn" id="theme-system" data-theme-val="system"><img src="https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/1/1a/C.svg" alt="C" width="15"> <span>System</span></button>
     </div>
   </header>
-
-  <!-- ── Configuration ──────────────────────────────────────────────── -->
   <div class="card">
     <p class="card-title">Configuration</p>
     <div class="config-row">
-
       <div class="config-group">
         <label for="condition-select">Preferred Condition</label>
         <select id="condition-select">
@@ -36,114 +42,63 @@
           <option value="DMG">DMG — Damaged</option>
         </select>
       </div>
-
       <div class="config-group">
         <label>Stores to Query</label>
         <div class="store-toggles">
-          <label class="store-toggle" id="toggle-four01" for="cb-four01">
-            <input type="checkbox" id="cb-four01" checked />
-            <span class="toggle-dot"></span>
-            401 Games
-          </label>
-          <label class="store-toggle" id="toggle-f2f" for="cb-f2f">
-            <input type="checkbox" id="cb-f2f" checked />
-            <span class="toggle-dot"></span>
-            Face to Face
-          </label>
-          <label class="store-toggle" id="toggle-wt" for="cb-wt">
-            <input type="checkbox" id="cb-wt" checked />
-            <span class="toggle-dot"></span>
-            Wizards Tower
-          </label>
+          <label class="store-toggle" id="toggle-four01"><input type="checkbox" id="cb-four01" checked/><span class="toggle-dot"></span>401 Games</label>
+          <label class="store-toggle" id="toggle-f2f">  <input type="checkbox" id="cb-f2f"    checked/><span class="toggle-dot"></span>Face to Face</label>
+          <label class="store-toggle" id="toggle-wt">   <input type="checkbox" id="cb-wt"     checked/><span class="toggle-dot"></span>Wizards Tower</label>
         </div>
       </div>
-
     </div>
   </div>
-
-  <!-- ── Input ──────────────────────────────────────────────────────────── -->
   <div class="card">
     <p class="card-title">Decklist</p>
-
-    <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Drop decklist file or click to browse">
-      <input type="file" id="file-input" accept=".txt,.csv" aria-label="Upload decklist file" />
-      <span class="drop-icon">📂</span>
+    <div class="drop-zone" id="drop-zone" tabindex="0">
+      <input type="file" id="file-input" accept=".txt,.csv"/>
+      <span class="drop-icon"><i class="fa-solid fa-folder-open"></i></span>
       <p class="drop-label"><strong>Drop a decklist</strong> or click to browse</p>
       <p class="drop-hint">.txt or .csv · One card per line</p>
     </div>
-
     <div class="paste-divider">or paste directly</div>
-
-    <textarea
-      id="paste-area"
-      placeholder="1 Sol Ring&#10;1 Command Tower&#10;1 Rhystic Study&#10;..."
-      aria-label="Paste decklist here"
-      spellcheck="false"
-    ></textarea>
-
-    <!-- CORS warning -->
-    <div class="cors-notice" id="cors-notice" role="alert">
-      <span class="cors-notice-icon">⚠️</span>
+    <textarea id="paste-area" placeholder="1 Sol Ring&#10;1 Command Tower&#10;1 Rhystic Study&#10;..."></textarea>
+    <div class="cors-notice visible" id="cors-notice">
+      <span class="cors-notice-icon"><i class="fa-solid fa-shuffle"></i></span>
       <div>
-        <span class="cors-notice-text">
-          Some stores blocked direct requests (CORS policy). Enable the proxy below and re-run to fetch all prices.
-        </span>
+        <span class="cors-notice-text"><strong>CORS proxy enabled.</strong> Requests are routed through corsproxy.io to avoid store blocks.</span>
         <div class="cors-toggle">
-          <input type="checkbox" id="cors-toggle" />
-          <label for="cors-toggle">Use CORS proxy (corsproxy.io) — routes requests through a free relay</label>
+          <input type="checkbox" id="cors-toggle" checked/>
+          <label for="cors-toggle">Use CORS proxy — uncheck to try direct requests</label>
         </div>
       </div>
     </div>
-
     <div class="btn-row">
-      <button class="btn btn-primary" id="run-btn">
-        <span>▶</span> Fetch Prices
-      </button>
-      <button class="btn btn-ghost" id="stop-btn" style="display:none">
-        <span>■</span> Stop
-      </button>
-      <button class="btn btn-secondary" id="clear-btn">
-        🗑 Clear
-      </button>
-      <button class="btn btn-secondary" id="export-btn" disabled>
-        ⬇ Export CSV
-      </button>
+      <button class="btn btn-primary" id="run-btn"><i class="fa-solid fa-play"></i> Fetch Prices</button>
+      <button class="btn btn-ghost" id="stop-btn" style="display:none"><i class="fa-solid fa-stop"></i> Stop</button>
+      <button class="btn btn-secondary" id="clear-btn"><i class="fa-solid fa-trash"></i> Clear</button>
+      <button class="btn btn-secondary" id="export-btn" disabled><i class="fa-solid fa-download"></i> Export CSV</button>
     </div>
   </div>
-
-  <!-- ── Progress ───────────────────────────────────────────────────────── -->
   <div class="card" id="progress-section">
     <div class="progress-header">
       <span class="progress-label" id="progress-label">0 / 0</span>
       <span class="progress-pct" id="progress-pct">0%</span>
     </div>
-    <div class="progress-bar-track">
-      <div class="progress-bar-fill" id="progress-bar"></div>
-    </div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-bar"></div></div>
     <div class="progress-status" id="progress-status">Ready</div>
   </div>
-
-  <!-- ── Results ────────────────────────────────────────────────────────── -->
   <div class="card" id="results-section">
     <div class="results-header">
       <p class="card-title" style="margin-bottom:0">Results</p>
       <span class="results-summary" id="results-summary"></span>
     </div>
-
     <div class="table-wrapper">
       <table id="results-table">
-        <thead>
-          <tr>
-            <th data-col="card">Card Name</th>
-            <!-- store columns injected by app.js -->
-          </tr>
-        </thead>
+        <thead><tr><th data-col="card">Card Name</th></tr></thead>
         <tbody id="results-tbody"></tbody>
       </table>
     </div>
   </div>
-
-  <!-- ── Footer ─────────────────────────────────────────────────────────── -->
   <footer>
     <span>DeckBldr · Prices fetched live from store APIs · All prices CAD</span>
     <span>
@@ -153,9 +108,7 @@
       <a href="https://www.kanatacg.com" target="_blank" rel="noopener">Wizards Tower</a>
     </span>
   </footer>
-
 </div>
-
 <script src="app.js"></script>
 </body>
 </html>
